@@ -82,22 +82,53 @@ class Board:
         moving_piece = self.get_piece(start_x, start_y)
         
         if not moving_piece:
-            return False  # No piece at the starting position
+            return "Illegal move: No piece at the starting position."
 
         # Check if the move is a castling move
-        if isinstance(moving_piece, King) and abs(start_y - end_y) == 2 and not moving_piece.has_moved:
-            if self.can_castle(moving_piece, start_x, start_y, end_y):
-                return self.perform_castling(moving_piece, start_x, start_y, end_y)
+        if isinstance(moving_piece, King) and abs(start_y - end_y) == 2:
+            if not moving_piece.has_moved:
+                if self.can_castle(moving_piece, start_x, start_y, end_y):
+                    return self.perform_castling(moving_piece, start_x, start_y, end_y)
+                else:
+                    return "Illegal move: Castling not allowed."
+            else:
+                return "Illegal move: King has already moved."
 
-        # Perform a regular move if not castling
+        if isinstance(moving_piece, Pawn) and (end_y == 0 or end_y == 7):
+            if self.handle_pawn_promotion(moving_piece, start_x, start_y, end_x, end_y):
+                return "Pawn promoted successfully."
+            else:
+                return "Illegal move: Pawn promotion failed."
+
+        # Perform a regular move if not castling or promoting
         if self.is_legal_move(start_pos, end_pos, moving_piece.color):
             self.board[end_y][end_x] = moving_piece
             self.board[start_y][start_x] = None
             moving_piece.has_moved = True  # Mark the piece as having moved
             self.update_position_history()  # Keep track of the board's state
-            return True
+            return "Move successful."
         
-        return False
+        return "Illegal move: Move violates game rules."
+
+
+    def handle_pawn_promotion(self, pawn, start_x, start_y, end_x, end_y):
+        """Handle the promotion of a pawn when it reaches the last row."""
+        promotion_type = self.prompt_for_promotion_choice(pawn.color)
+        self.board[start_y][start_x] = None  # Remove the pawn from its starting position
+        new_piece = self.create_piece_from_type(promotion_type, pawn.color, end_x, end_y)
+        self.board[end_y][end_x] = new_piece
+        return True
+
+    def prompt_for_promotion_choice(self, color):
+        """Simulate prompting the user for their choice of new piece type."""
+        # In a real game, this could be replaced by actual user input
+        print(f"Choose new piece for promotion (Queen, Rook, Bishop, Knight):")
+        return input("Your choice: ").strip().capitalize()
+
+    def create_piece_from_type(self, piece_type, color, x, y):
+        """Create a new piece based on type and place it on the board."""
+        piece_classes = {'Queen': Queen, 'Rook': Rook, 'Bishop': Bishop, 'Knight': Knight}
+        return piece_classes[piece_type](color, x, y)
 
     def can_castle(self, king, start_x, start_y, end_y):
         """Check if castling is possible given the king's current state and position."""
